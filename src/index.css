@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f8fafc;
+  /* Slate 50 */
+  color: #0f172a;
+  /* Slate 900 */
+}
+
+/* ATS Resume Template Overrides */
+.ats-resume-template {
+  background-color: white !important;
+  color: black !important;
+  font-family: 'Times New Roman', Times, serif !important;
+}
+
+.ats-resume-template h1,
+.ats-resume-template h2,
+.ats-resume-template h3,
+.ats-resume-template p,
+.ats-resume-template ul {
+  color: black !important;
+}
+
+/* Print Styles */
+@media print {
+
+  /* Hide UI elements */
+  nav,
+  aside,
+  button,
+  .no-print,
+  [role="navigation"],
+  [role="complementary"] {
+    display: none !important;
+  }
+
+  /* Reset layout for printing */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the builder sidebar and the form workspace specifically */
+  aside,
+  section:not(.xl\:block) {
+    display: none !important;
+  }
+
+  /* Ensure the preview section container is shown */
+  section.xl\:block {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    z-index: 9999 !important;
+  }
+
+  /* Resume internal sections MUST be visible */
+  #resume-preview-content section {
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Clear any fixed/absolute positioning on the resume container */
+  #resume-preview-content {
+    visibility: visible !important;
+    display: block !important;
+    width: 210mm !important;
+    /* A4 width */
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0.5in !important;
+    box-shadow: none !important;
+    min-height: 297mm !important;
+    /* A4 height */
+    border: none !important;
+    background: white !important;
+  }
+
+  /* Force vertical orientation and margins */
+  @page {
+    size: portrait;
+    margin: 0;
+  }
+}
