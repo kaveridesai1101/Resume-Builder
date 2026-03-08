@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useResume } from '../context/ResumeContext';
-import { Phone, Mail, Linkedin, Github, Download } from 'lucide-react';
+import { Phone, Mail, Linkedin, Github, Download, Loader } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 const ResumePreview = React.forwardRef((props, ref) => {
     const { resumeData } = useResume();
     const { personal, education, experience, projects, skills, leadership } = resumeData;
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Split string by commas for skills
     const formatSkills = (skillString) => {
@@ -13,18 +15,39 @@ const ResumePreview = React.forwardRef((props, ref) => {
     };
 
     const handleDownload = () => {
-        document.title = 'resume.pdf';
-        window.print();
+        setIsDownloading(true);
+        const element = document.getElementById('resume-preview-content');
+
+        const opt = {
+            margin: [10, 0, 10, 0], // mm margins (top/bottom)
+            filename: 'Professional_Resume.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'], avoid: '.prevent-page-break' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            setIsDownloading(false);
+        }).catch((err) => {
+            console.error('Error downloading PDF', err);
+            setIsDownloading(false);
+        });
     };
 
     return (
         <div className="relative group print:p-0 print:m-0 print:bg-white w-full h-full">
             <button
                 onClick={handleDownload}
-                className="absolute top-4 right-4 bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-all duration-300 z-50 print:hidden flex items-center transform hover:scale-105"
+                disabled={isDownloading}
+                className={`absolute top-4 right-4 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-primary-500/30 transition-all flex items-center print:hidden z-50 no-print ${isDownloading ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
+                {isDownloading ? (
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                )}
+                {isDownloading ? 'Generating...' : 'Download PDF'}
             </button>
             <div
                 ref={ref}
@@ -82,7 +105,7 @@ const ResumePreview = React.forwardRef((props, ref) => {
                     <section className="mb-4">
                         <h2 className="text-[12pt] font-bold border-b border-black pb-[1px] mb-1.5 uppercase tracking-wide">Education</h2>
                         {education.map((item) => (
-                            <div key={item.id} className="mb-2.5">
+                            <div key={item.id} className="mb-2.5 prevent-page-break">
                                 <div className="flex justify-between items-baseline font-bold text-[11pt]">
                                     <h3>{item.institution}</h3>
                                     <span>{item.startDate} {item.startDate && item.endDate ? '–' : ''} {item.endDate}</span>
@@ -107,7 +130,7 @@ const ResumePreview = React.forwardRef((props, ref) => {
                     <section className="mb-4">
                         <h2 className="text-[12pt] font-bold border-b border-black pb-[1px] mb-1.5 uppercase tracking-wide">Experience</h2>
                         {experience.map((item) => (
-                            <div key={item.id} className="mb-3">
+                            <div key={item.id} className="mb-3 prevent-page-break">
                                 <div className="flex justify-between items-baseline font-bold text-[11pt]">
                                     <h3>{item.company}</h3>
                                     <span>{item.startDate} {item.startDate && item.endDate ? '–' : ''} {item.endDate}</span>
@@ -131,7 +154,7 @@ const ResumePreview = React.forwardRef((props, ref) => {
                     <section className="mb-4">
                         <h2 className="text-[12pt] font-bold border-b border-black pb-[1px] mb-1.5 uppercase tracking-wide">Projects</h2>
                         {projects.map((item) => (
-                            <div key={item.id} className="mb-3">
+                            <div key={item.id} className="mb-3 prevent-page-break">
                                 <div className="flex justify-between items-baseline text-[11pt]">
                                     <div className="font-bold">
                                         {item.title}
@@ -153,7 +176,7 @@ const ResumePreview = React.forwardRef((props, ref) => {
 
                 {/* TECHNICAL SKILLS */}
                 {(skills.languages || skills.frameworks || skills.tools) && (
-                    <section className="mb-4">
+                    <section className="mb-4 prevent-page-break">
                         <h2 className="text-[12pt] font-bold border-b border-black pb-[1px] mb-1.5 uppercase tracking-wide">Technical Skills</h2>
                         <div className="text-[11pt] leading-normal space-y-0.5">
                             {skills.languages && (
@@ -183,7 +206,7 @@ const ResumePreview = React.forwardRef((props, ref) => {
                     <section className="mb-4">
                         <h2 className="text-[12pt] font-bold border-b border-black pb-[1px] mb-1.5 uppercase tracking-wide">Leadership / Extracurricular</h2>
                         {leadership.map((item) => (
-                            <div key={item.id} className="mb-3">
+                            <div key={item.id} className="mb-3 prevent-page-break">
                                 <div className="flex justify-between items-baseline font-bold text-[11pt]">
                                     <h3>{item.organization}</h3>
                                     <span>{item.startDate} {item.startDate && item.endDate ? '–' : ''} {item.endDate}</span>

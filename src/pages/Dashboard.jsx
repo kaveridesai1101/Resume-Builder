@@ -14,76 +14,84 @@ const Dashboard = () => {
     };
     const { personal, experience, education, projects, skills } = resumeData;
 
-    // Mock ATS Logic Calculation
-    const { score, checks } = useMemo(() => {
-        let currentScore = 0;
-        const rules = [];
+    const [score, setScore] = React.useState(0);
+    const [checks, setChecks] = React.useState([]);
+    const [isLoading, setIsLoading] = React.useState(true);
 
-        // Personal Details (20 pts)
-        const hasContact = personal.email && personal.phone;
-        rules.push({
-            label: 'Contact Information Complete',
-            status: hasContact ? 'pass' : 'fail',
-            suggestion: 'Ensure both email and phone are provided.'
-        });
-        if (hasContact) currentScore += 10;
+    React.useEffect(() => {
+        const fetchAtsScore = async () => {
+            setIsLoading(true);
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:5000/api/ats/score', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        jobRole: resumeData?.config?.jobRole || 'Software Developer',
+                        resumeData: resumeData
+                    })
+                });
 
-        const hasProfessionalLinks = personal.linkedin || personal.github;
-        rules.push({
-            label: 'Professional Links (LinkedIn/GitHub)',
-            status: hasProfessionalLinks ? 'pass' : 'warn',
-            suggestion: 'Adding LinkedIn or GitHub improves visibility.'
-        });
-        if (hasProfessionalLinks) currentScore += 10;
+                if (response.ok) {
+                    const data = await response.json();
+                    setScore(data.overallScore || 0);
 
-        // Experience (30 pts)
-        const hasExperience = experience.length > 0 && experience[0].company;
-        rules.push({
-            label: 'Work Experience Listed',
-            status: hasExperience ? 'pass' : 'fail',
-            suggestion: 'Add relevant work history or internships.'
-        });
-        if (hasExperience) currentScore += 15;
+                    const rules = [];
 
-        let goodDescLength = false;
-        if (hasExperience) {
-            const descriptions = experience[0].description.join(' ');
-            goodDescLength = descriptions.split(' ').length > 20;
-            rules.push({
-                label: 'Detailed Experience Bullet Points',
-                status: goodDescLength ? 'pass' : 'warn',
-                suggestion: 'Expand your experience bullet points with metrics.'
-            });
-            if (goodDescLength) currentScore += 15;
-        }
+                    if (data.matchedCount > 0) {
+                        rules.push({
+                            label: `Matched ${data.matchedCount} Industry Keywords`,
+                            status: 'pass',
+                            suggestion: `Excellent use of relevant terms: ${data.skillsMatch.slice(0, 5).join(', ')}.`
+                        });
+                    }
 
-        // Education & Projects (20 pts)
-        const hasEducation = education.length > 0 && education[0].institution;
-        rules.push({
-            label: 'Education Section Present',
-            status: hasEducation ? 'pass' : 'fail',
-            suggestion: 'Include your latest degree/institution.'
-        });
-        if (hasEducation) currentScore += 10;
+                    if (data.missingKeywords && data.missingKeywords.length > 0) {
+                        rules.push({
+                            label: `Missing ${data.missingKeywords.length} Targeted Keywords`,
+                            status: data.missingKeywords.length > 5 ? 'fail' : 'warn',
+                            suggestion: `Try incorporating: ${data.missingKeywords.slice(0, 5).join(', ')}.`
+                        });
+                    } else if (data.missingKeywords && data.missingKeywords.length === 0) {
+                        rules.push({
+                            label: `Perfect Keyword Match`,
+                            status: 'pass',
+                            suggestion: `Your resume contains all standard targeted keywords for your role!`
+                        });
+                    }
 
-        const hasProjects = projects.length > 0 && projects[0].title;
-        rules.push({
-            label: 'Projects Section Included',
-            status: hasProjects ? 'pass' : 'warn',
-            suggestion: 'Add 1-2 projects to showcase practical application.'
-        });
-        if (hasProjects) currentScore += 10;
+                    if (data.breakdown.structure >= 30) {
+                        rules.push({
+                            label: 'Complete Document Structure',
+                            status: 'pass',
+                            suggestion: 'Your layout includes all critical sections (Experience, Skills, Education).'
+                        });
+                    } else {
+                        rules.push({
+                            label: 'Incomplete Sections',
+                            status: 'warn',
+                            suggestion: 'Ensure you have fully populated your Experience, Skills, and Education sections to score higher.'
+                        });
+                    }
 
-        // Skills (30 pts)
-        const hasHardSkills = skills.languages || skills.frameworks;
-        rules.push({
-            label: 'Technical Skills Documented',
-            status: hasHardSkills ? 'pass' : 'fail',
-            suggestion: 'List technical languages or frameworks.'
-        });
-        if (hasHardSkills) currentScore += 30;
-
-        return { score: currentScore, checks: rules };
+                    setChecks(rules);
+                } else {
+                    // Fallback visually if API fails
+                    setScore(70);
+                    setChecks([{ label: 'Basic ATS Check', status: 'warn', suggestion: 'Score estimated. Backend unavailable.' }]);
+                }
+            } catch (err) {
+                console.error('Failed to get ATS score', err);
+                setScore(50);
+                setChecks([{ label: 'Connection Error', status: 'fail', suggestion: 'Could not connect to ATS analyzer.' }]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAtsScore();
     }, [resumeData]);
 
     const getScoreColor = () => {

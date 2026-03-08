@@ -13,9 +13,11 @@ const sendEmail = async (options) => {
         return true;
     }
 
+    console.log(`[SMTP] Attempting to send via: ${process.env.EMAIL_USER} (Pass: ${process.env.EMAIL_PASS ? 'AVAILABLE' : 'MISSING'})`);
+
     try {
         const transporter = nodemailer.createTransport({
-            service: 'Gmail', // Or your preferred service
+            service: 'gmail', // Or your preferred service
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
@@ -38,9 +40,10 @@ const sendEmail = async (options) => {
         };
 
         await transporter.sendMail(mailOptions);
+        console.log(`[${new Date().toLocaleTimeString()}] OTP Email sent successfully to: ${options.email}`);
         return true;
     } catch (error) {
-        console.error('Email Send Error:', error);
+        console.error(`[${new Date().toLocaleTimeString()}] Email Send Error for ${options.email}:`, error.message);
         throw new Error('Email could not be sent');
     }
 };

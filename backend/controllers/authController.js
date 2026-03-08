@@ -16,7 +16,8 @@ const generateToken = (id) => {
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, password } = req.body;
+        const email = req.body.email?.toLowerCase().trim();
 
         if (!name || !email || !password) {
             return res.status(400).json({ message: 'Please add all fields' });
@@ -31,6 +32,10 @@ const registerUser = async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
+        console.log(`\n========================================`);
+        console.log(`[OTP] Registration OTP for ${email}: ${otp}`);
+        console.log(`========================================\n`);
+
         const user = await User.create({
             name,
             email,
@@ -41,11 +46,16 @@ const registerUser = async (req, res) => {
         });
 
         if (user) {
-            // Send Verification Email
-            await sendEmail({
+            // Send Verification Email (non-blocking - don't let email failure kill registration)
+            sendEmail({
                 email: user.email,
                 subject: 'Verify Your Email - AI Resume Builder',
                 message: `Hello ${user.name},\n\nYour 6-digit verification code is: ${otp}\n\nThis code will expire in 10 minutes.`,
+            }).then(() => {
+                console.log(`[EMAIL] Verification email sent to ${user.email}`);
+            }).catch((emailErr) => {
+                console.error(`[EMAIL ERROR] Failed to send to ${user.email}:`, emailErr.message);
+                console.log(`[FALLBACK] Use the OTP from the console log above to verify.`);
             });
 
             res.status(201).json({
@@ -66,22 +76,30 @@ const registerUser = async (req, res) => {
 // @access  Public
 const verifyEmail = async (req, res) => {
     try {
-        const { email, otp } = req.body;
+        const email = req.body.email?.toLowerCase().trim();
+        const { otp } = req.body;
 
-        const user = await User.findOne({
-            email,
-            otp,
-            otpExpires: { $gt: Date.now() }
-        });
+        console.log(`[VERIFY] Attempting verification for ${email} with OTP: ${otp}`);
+
+        const user = await User.findOneAndUpdate(
+            {
+                email,
+                otp,
+                otpExpires: { $gt: Date.now() }
+            },
+            {
+                $set: { isVerified: true },
+                $unset: { otp: '', otpExpires: '' }
+            },
+            { new: true }
+        );
 
         if (!user) {
+            console.log(`[VERIFY] No matching user found for email: ${email}`);
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
-        user.isVerified = true;
-        user.otp = undefined;
-        user.otpExpires = undefined;
-        await user.save();
+        console.log(`[VERIFY] Email verified successfully for ${user.email}`);
 
         res.status(200).json({
             message: 'Email verified successfully. You can now log in.',
@@ -90,7 +108,7 @@ const verifyEmail = async (req, res) => {
             email: user.email,
         });
     } catch (error) {
-        console.error(error);
+        console.error('[VERIFY ERROR]', error.message);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -100,7 +118,8 @@ const verifyEmail = async (req, res) => {
 // @access  Public
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const email = req.body.email?.toLowerCase().trim();
+        const { password } = req.body;
         const user = await User.findOne({ email });
 
         if (user && (await user.matchPassword(password))) {
@@ -128,7 +147,7 @@ const loginUser = async (req, res) => {
 // @access  Public
 const forgotPassword = async (req, res) => {
     try {
-        const { email } = req.body;
+        const email = req.body.email?.toLowerCase().trim();
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -140,10 +159,19 @@ const forgotPassword = async (req, res) => {
         user.otpExpires = Date.now() + 10 * 60 * 1000;
         await user.save();
 
-        await sendEmail({
+        console.log(`\n========================================`);
+        console.log(`[OTP] Password Reset OTP for ${email}: ${otp}`);
+        console.log(`========================================\n`);
+
+        // Non-blocking email send
+        sendEmail({
             email: user.email,
             subject: 'Password Reset OTP - AI Resume Builder',
             message: `You requested a password reset. Your OTP is: ${otp}\n\nIf you did not request this, please ignore this email.`,
+        }).then(() => {
+            console.log(`[EMAIL] Password reset email sent to ${user.email}`);
+        }).catch((emailErr) => {
+            console.error(`[EMAIL ERROR] Failed to send to ${user.email}:`, emailErr.message);
         });
 
         res.status(200).json({ message: 'Password reset OTP sent to email' });
@@ -158,7 +186,8 @@ const forgotPassword = async (req, res) => {
 // @access  Public
 const resetPassword = async (req, res) => {
     try {
-        const { email, otp, newPassword } = req.body;
+        const email = req.body.email?.toLowerCase().trim();
+        const { otp, newPassword } = req.body;
 
         const user = await User.findOne({
             email,

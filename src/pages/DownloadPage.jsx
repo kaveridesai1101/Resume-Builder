@@ -15,13 +15,14 @@ const DownloadPage = () => {
 
         const element = resumeRef.current;
 
-        // Configure html2pdf options for standard 8.5x11 inches letter size
+        // Configure html2pdf options for standard A4 size with multi-page support
         const opt = {
-            margin: [0.4, 0.4, 0.4, 0.4], // inches
+            margin: [10, 0, 10, 0], // mm margins (top/bottom)
             filename: 'Professional_Resume.pdf',
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'], avoid: '.prevent-page-break' }
         };
 
         html2pdf().set(opt).from(element).save().then(() => {

@@ -36,7 +36,7 @@ const VerifyEmail = () => {
                 setSuccess(true);
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify({ name: data.name, email: data.email }));
-                setTimeout(() => navigate('/dashboard'), 2000);
+                setTimeout(() => navigate('/builder'), 2000);
             } else {
                 setError(data.message || 'Verification failed');
             }

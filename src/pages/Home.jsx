@@ -18,7 +18,7 @@ const Home = () => {
                     <div className="hidden md:flex items-center space-x-8">
                         <a href="#features" className="text-sm font-bold text-slate-500 hover:text-primary-600 transition-colors">Features</a>
                         <a href="#how-it-works" className="text-sm font-bold text-slate-500 hover:text-primary-600 transition-colors">How it Works</a>
-                        <Link to="/dashboard" className="text-sm font-bold text-slate-500 hover:text-primary-600 transition-colors">Dashboard</Link>
+                        <Link to="/builder" className="text-sm font-bold text-slate-500 hover:text-primary-600 transition-colors">Builder</Link>
                     </div>
 
                     <div className="flex items-center space-x-4">

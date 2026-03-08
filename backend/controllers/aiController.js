@@ -97,7 +97,7 @@ Rules:
                 console.log(`[Groq AI] Requesting ${type} for ${jobRole}`);
                 const completion = await groq.chat.completions.create({
                     messages: [
-                        { role: 'system', content: 'You are a world-class professional resume writer and career coach specializing in prestigious, high-density content.' },
+                        { role: 'system', content: 'You are a world-class professional resume writer and career coach specializing in prestigious, high-density content. You must respond ONLY with a valid JSON object. Do not include any markdown formatting like ```json or ```.' },
                         { role: 'user', content: prompt }
                     ],
                     model: MODEL,
@@ -108,15 +108,43 @@ Rules:
                 let aiText = completion.choices[0]?.message?.content?.trim();
 
                 if (aiText) {
-                    // Extract JSON if AI wraps it in markdown blocks
+                    console.log(`[Groq Raw Output]:`, aiText);
+
+                    // Attempt to extract JSON from the text
                     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) aiText = jsonMatch[0];
+
+                    if (jsonMatch) {
+                        aiText = jsonMatch[0];
+                    }
 
                     try {
                         const parsed = JSON.parse(aiText);
-                        return res.json({ result: parsed });
+                        console.log(`[Groq Parsed JSON]: Success`);
+                        return res.status(200).json({ result: parsed });
                     } catch (parseError) {
-                        return res.json({ result: aiText }); // Return raw if JSON fails
+                        console.error('[Groq Strict Parse Error]:', parseError.message);
+
+                        // BULLETPROOF FALLBACK: Evaluates JS Object syntax
+                        // LLMs often output valid JS objects instead of strict JSON (e.g. unescaped quotes, trailing commas)
+                        try {
+                            // 1. Remove control characters
+                            let sanitizedForEval = aiText.replace(/[\u0000-\u0019]+/g, "");
+
+                            // 2. Fix unescaped literal newlines inside JS strings that break the Function constructor
+                            // Replace actual newline characters with the literal string "\n"
+                            sanitizedForEval = sanitizedForEval.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+
+                            // Use Function constructor to safely evaluate the JS object string
+                            // This natively handles trailing commas, unquoted keys, and unescaped inner quotes much better than JSON.parse
+                            const evaluateJS = new Function('return ' + sanitizedForEval);
+                            const parsedJS = evaluateJS();
+
+                            console.log(`[Groq AST Evaluation]: Success`);
+                            return res.status(200).json({ result: parsedJS });
+                        } catch (backupError) {
+                            console.log('[Failed Text]:', aiText);
+                            console.error('[Backup Evaluation Error]:', backupError.message);
+                        }
                     }
                 }
             } catch (aiError) {

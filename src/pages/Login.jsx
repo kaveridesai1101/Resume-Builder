@@ -37,7 +37,7 @@ const Login = () => {
             if (response.ok) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify({ name: data.name, email: data.email }));
-                navigate('/dashboard');
+                navigate('/builder');
             } else {
                 if (data.message === 'Please verify your email to log in') {
                     navigate('/verify-email', { state: { email: email } });

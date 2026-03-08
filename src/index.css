@@ -32,6 +32,14 @@ body {
   color: black !important;
 }
 
+/* Page Break Utility for html2pdf.js */
+.prevent-page-break {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  margin-bottom: 2mm;
+  /* Ensure slight padding at natural breaks */
+}
+
 /* Print Styles */
 @media print {
 
